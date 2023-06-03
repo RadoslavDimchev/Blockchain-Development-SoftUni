@@ -7,6 +7,7 @@ function App() {
   const [provider, setProvider] = useState(null);
   const [blockNumber, setBlockNumber] = useState(null);
   const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("connected")) {
@@ -59,7 +60,20 @@ function App() {
   };
 
   const sendTransaction = async () => {
-    
+    const signer = provider.getSigner();
+    setLoading(true);
+
+    signer
+      .sendTransaction({
+        to: "0x0b6335DeD3AE2ba63DA0E1A9D8A1EAbEA446b582",
+        value: ethers.utils.parseEther("1.0"),
+      })
+      .then((tx) => {
+        console.log(tx);
+        return tx.wait();
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -71,10 +85,13 @@ function App() {
       {blockNumber !== null && <h2>{blockNumber}</h2>}
 
       <button onClick={getBalanceHandler}>Get Balance</button>
-      <button onClick={getBalanceInWeiFromETHHandler}>Get Balance in wei from parsed eth</button>
+      <button onClick={getBalanceInWeiFromETHHandler}>
+        Get Balance in wei from parsed eth
+      </button>
       {balance !== null && <h2>{balance.toString()}</h2>}
 
-      <button onClick={sendTransaction} >Send transaction</button>
+      <button onClick={sendTransaction}>Send transaction</button>
+      {loading && <p>Loading...</p>}
     </div>
   );
 }
