@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
 import "./NFT.sol";
 
-contract NFTMarketplace is NFT, Ownable {
+contract NFTMarketplace is NFT {
     struct Sale {
         address seller;
         uint256 price;
@@ -13,13 +11,16 @@ contract NFTMarketplace is NFT, Ownable {
 
     // collection => id => price
     mapping(address => mapping(uint256 => Sale)) public nftsForSale;
+
+    // seller => profit
     mapping(address => uint256) profits;
 
     function listNFTForSale(
         address collection,
         uint256 id,
         uint256 price
-    ) external onlyOwner {
+    ) external {
+        require(_msgSender() == ownerOf(id), "You are not the owner of NFT");
         require(
             nftsForSale[collection][id].seller == address(0),
             "NFT is already listed"
@@ -30,6 +31,19 @@ contract NFTMarketplace is NFT, Ownable {
 
         transferFrom(_msgSender(), address(this), id);
         approve(address(this), id);
+    }
+
+    function unlistNFT(address collection, uint256 id, address to) external {
+        Sale memory sale = nftsForSale[collection][id];
+        address seller = sale.seller;
+
+        require(seller != address(0), "NFT is not listed");
+        require(seller == _msgSender(), "You are not the seller");
+
+        delete nftsForSale[collection][id];
+
+        safeTransferFrom(address(this), to, id);
+        approve(to, id);
     }
 
     function purchaseNFT(
@@ -52,7 +66,7 @@ contract NFTMarketplace is NFT, Ownable {
         approve(to, id);
     }
 
-    function claimProfit() external onlyOwner {
+    function claimProfit() external {
         uint256 profit = profits[_msgSender()];
         require(profit != 0, "No profit to claim");
 
