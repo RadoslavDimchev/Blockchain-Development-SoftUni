@@ -6,7 +6,7 @@ describe("NFTMarketplace", function () {
   const NOT_VALID_PRICE = ethers.utils.parseEther("0");
 
   async function mintNFT() {
-    const [deployer, firstAccount, secondAccount] = await ethers.getSigners();
+    const [deployer, firstAccount] = await ethers.getSigners();
 
     const NFTMarketplaceFactory = await ethers.getContractFactory(
       "NFTMarketplace",
@@ -15,14 +15,13 @@ describe("NFTMarketplace", function () {
     const nftMarketplace = await NFTMarketplaceFactory.deploy();
     const nftMarketplaceFirstUser = nftMarketplace.connect(firstAccount);
 
-    await nftMarketplaceFirstUser.createNFT("test");
+    await nftMarketplace.createNFT("test");
 
     return {
       nftMarketplace,
       nftMarketplaceFirstUser,
       deployer,
       firstAccount,
-      secondAccount,
     };
   }
 
@@ -51,21 +50,7 @@ describe("NFTMarketplace", function () {
 
   describe("Listing", function () {
     it("should revert if not owner list NFT", async function () {
-      const { nftMarketplace } = await loadFixture(mintNFT);
-
-      await expect(
-        nftMarketplace.listNFTForSale(nftMarketplace.address, 0, PRICE)
-      ).to.be.reverted;
-    });
-
-    it("should revert if NFT is listed", async function () {
       const { nftMarketplaceFirstUser } = await loadFixture(mintNFT);
-
-      await nftMarketplaceFirstUser.listNFTForSale(
-        nftMarketplaceFirstUser.address,
-        0,
-        PRICE
-      );
 
       await expect(
         nftMarketplaceFirstUser.listNFTForSale(
@@ -73,15 +58,25 @@ describe("NFTMarketplace", function () {
           0,
           PRICE
         )
+      ).to.be.reverted;
+    });
+
+    it("should revert if NFT is listed", async function () {
+      const { nftMarketplace } = await loadFixture(mintNFT);
+
+      await nftMarketplace.listNFTForSale(nftMarketplace.address, 0, PRICE);
+
+      await expect(
+        nftMarketplace.listNFTForSale(nftMarketplace.address, 0, PRICE)
       ).to.be.revertedWith("NFT is already listed");
     });
 
     it("should revert with invalid price", async function () {
-      const { nftMarketplaceFirstUser } = await loadFixture(mintNFT);
+      const { nftMarketplace } = await loadFixture(mintNFT);
 
       await expect(
-        nftMarketplaceFirstUser.listNFTForSale(
-          nftMarketplaceFirstUser.address,
+        nftMarketplace.listNFTForSale(
+          nftMarketplace.address,
           0,
           NOT_VALID_PRICE
         )
@@ -89,37 +84,28 @@ describe("NFTMarketplace", function () {
     });
 
     it("should success list NFT", async function () {
-      const { nftMarketplaceFirstUser, firstAccount } = await loadFixture(
-        mintNFT
-      );
+      const { nftMarketplace, deployer } = await loadFixture(mintNFT);
 
-      const tx = await nftMarketplaceFirstUser.listNFTForSale(
-        nftMarketplaceFirstUser.address,
+      const tx = await nftMarketplace.listNFTForSale(
+        nftMarketplace.address,
         0,
         PRICE
       );
 
       await expect(tx)
-        .to.emit(nftMarketplaceFirstUser, "NFTListed")
-        .withArgs(
-          nftMarketplaceFirstUser.address,
-          0,
-          firstAccount.address,
-          PRICE
-        );
+        .to.emit(nftMarketplace, "NFTListed")
+        .withArgs(nftMarketplace.address, 0, deployer.address, PRICE);
     });
   });
 
   describe("Purchase", function () {
-    // it("should revert if NFT is not listed", async function () {
-    //   const { nftMarketplace, secondAccount } = await loadFixture(mintNFT);
-    //   const tx = nftMarketplace.purchaseNFT(
-    //     nftMarketplace,
-    //     0,
-    //     secondAccount.address
-    //   );
-    //   expect(tx).to.be.revertedWith("NFT is not listed");
-    // });
+    it("should revert if NFT is not listed", async function () {
+      const { nftMarketplace, firstAccount } = await loadFixture(mintNFT);
+
+      await expect(
+        nftMarketplace.purchaseNFT(nftMarketplace.address, 0, firstAccount.address)
+      ).to.be.revertedWith("NFT is not listed");
+    });
     // it("test", async function () {
     //   const { nftMarketplace, secondAccount } = await loadFixture(listNFT);
     //   const tx = nftMarketplace.purchaseNFT(nftMarketplace, 0, secondAccount.address);
