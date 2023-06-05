@@ -9,6 +9,13 @@ contract NFTMarketplace is NFT {
         uint256 price;
     }
 
+    event NFTListed(
+        address indexed collection,
+        uint256 indexed id,
+        address indexed seller,
+        uint256 price
+    );
+
     // collection => id => price
     mapping(address => mapping(uint256 => Sale)) public nftsForSale;
 
@@ -20,7 +27,6 @@ contract NFTMarketplace is NFT {
         uint256 id,
         uint256 price
     ) external {
-        require(_msgSender() == ownerOf(id), "You are not the owner of NFT");
         require(
             nftsForSale[collection][id].seller == address(0),
             "NFT is already listed"
@@ -29,8 +35,9 @@ contract NFTMarketplace is NFT {
 
         nftsForSale[collection][id] = Sale(_msgSender(), price);
 
+        emit NFTListed(collection, id, _msgSender(), price);
+
         transferFrom(_msgSender(), address(this), id);
-        approve(address(this), id);
     }
 
     function unlistNFT(address collection, uint256 id, address to) external {
@@ -43,7 +50,6 @@ contract NFTMarketplace is NFT {
         delete nftsForSale[collection][id];
 
         safeTransferFrom(address(this), to, id);
-        approve(to, id);
     }
 
     function purchaseNFT(
@@ -55,7 +61,10 @@ contract NFTMarketplace is NFT {
         address seller = sale.seller;
 
         require(seller != address(0), "NFT is not listed");
-        require(seller != _msgSender(), "You cannot buy your own NFT");
+        require(
+            seller != _msgSender() && seller != to,
+            "You cannot buy your own NFT"
+        );
         require(sale.price == msg.value, "Invalid price");
 
         profits[seller] += msg.value;
@@ -63,7 +72,6 @@ contract NFTMarketplace is NFT {
         delete nftsForSale[collection][id];
 
         safeTransferFrom(address(this), _msgSender(), id);
-        approve(to, id);
     }
 
     function claimProfit() external {
