@@ -71,7 +71,7 @@ contract NFTMarketplace is NFT {
 
         delete nftsForSale[collection][id];
 
-        safeTransferFrom(address(this), _msgSender(), id);
+        safeTransferFrom(address(this), to, id);
     }
 
     function claimProfit() external {
