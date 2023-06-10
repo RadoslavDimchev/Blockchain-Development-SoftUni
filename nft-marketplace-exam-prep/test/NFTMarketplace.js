@@ -157,8 +157,6 @@ describe("NFTMarketplace", function () {
         { value: PRICE }
       );
 
-      console.log("eeeee");
-
       expect(await nftMarketplace.ownerOf(0)).to.equal(firstAccount.address);
       expect(
         (
